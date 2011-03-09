@@ -4,6 +4,8 @@ use strict;
 use warnings;
 use List::Util ();
 
+use Tree::SEMETrie::Iterator;
+
 #Class Constants
 my $VALUE  = 0;
 my $CHILDS = 1;
@@ -53,13 +55,15 @@ my $compress_trie_ref = sub {
 
 my $merge_choice_ref = sub { $_[0] };
 
-#Main
+#Constructor
 
 sub new {
 	my $class = shift;
 	$class = ref $class || $class;
 	return bless [], $class;
 }
+
+#Root Accessors/Mutators
 
 sub childs {
 	my $self = shift;
@@ -70,7 +74,6 @@ sub childs {
 		$childs_type eq 'HASH'  ? map { [$_, $make_new_trie_ref->($childs_ref->{$_}, $self)] } keys %$childs_ref :
 			();
 }
-
 *children = \&childs;
 
 sub value {
@@ -80,6 +83,80 @@ sub value {
 	}
 	return ${$self->[$VALUE]};
 }
+
+#Validators
+
+sub has_childs { ref($_[0][$CHILDS]) ne '' }
+*has_children = \&has_childs;
+
+sub has_value { defined $_[0][$VALUE] }
+
+#Trie Accessors
+
+sub all {
+	my $self = shift;
+
+	my @results;
+	for (my $iterator = $self->iterator; $iterator->is_done; $iterator->next) {
+		push @results, [$iterator->key, $iterator->value];
+	}
+
+	return @results;
+}
+
+sub find {
+	my $self = shift;
+	my ($key) = @_;
+
+	my $node = $self;
+
+	my ($key_iter, $key_length) = (0, length $key);
+	while ($key_iter < $key_length) {
+		my $childs_type = ref($node->[$CHILDS]);
+
+		#Key does not exist since we're at the end of the trie
+		if (! $childs_type) { $node = undef; last }
+
+		#Check within the compressed trie node
+		elsif ($childs_type eq 'ARRAY') {
+			#Determine where the keys match
+			my $old_key = $node->[$CHILDS][$SINGLE_CHILD_KEY];
+			my $old_key_length = length $old_key;
+			my $match_length = $find_match_length_ref->(substr($key, $key_iter), $old_key);
+
+			#The new key contains all of the old key
+			if($match_length == $old_key_length) {
+				#Move to the end of the compressed node
+				$node = $node->[$CHILDS][$SINGLE_CHILD_NODE];
+				#Move to the next part of the key
+				$key_iter += $match_length;
+
+			#The old key contains all of the new key
+			} elsif($match_length == $key_length - $key_iter) {
+				#Create a new trie containing the unmatched suffix of the matched key and its sub-trie
+				my $new_node = [];
+				$new_node->[$CHILDS][$SINGLE_CHILD_KEY] = substr($old_key, $match_length);
+				$new_node->[$CHILDS][$SINGLE_CHILD_NODE] = $node->[$CHILDS][$SINGLE_CHILD_NODE];
+				$node = $new_node;
+				last;
+
+			#There was a mismatch in the comparison so the key doesn't exist
+			} else { $node = undef; last }
+
+		#Keep expanding down the trie
+		} else {
+			$node = $node->[$CHILDS]{substr($key, $key_iter, 1)};
+			++$key_iter;
+		}
+	}
+
+	return $node ? $make_new_trie_ref->($node, $self) : undef;
+}
+*lookup = \&find;
+
+sub iterator { Tree::SEMETrie::Iterator->new($_[0]) }
+
+#Trie Operators
 
 sub add {
 	my $self = shift;
@@ -187,84 +264,9 @@ sub add {
 	}
 	return 0;
 }
-
 *insert = \&add;
 
-sub all {
-	my $self = shift;
-
-	my @results = ();
-	my @nodes = ['', $self];
-	while (@nodes) {
-		my ($key, $node) = @{shift @nodes};
-		my $childs_type = ref($node->[$CHILDS]);
-
-		push @results, [$key, ${$node->[$VALUE]}] if $node->[$VALUE];
-
-		if (! $childs_type) {
-		} elsif ($childs_type eq 'ARRAY') {
-			push @nodes, [$key . $node->[$CHILDS][$SINGLE_CHILD_KEY] , $node->[$CHILDS][$SINGLE_CHILD_NODE]];
-		} else {
-			while (my ($k, $n) = each %{$node->[$CHILDS]}) {
-				push @nodes, [$key . $k, $n];
-			}
-		}
-	}
-	return @results;
-}
-
-sub find {
-	my $self = shift;
-	my ($key) = @_;
-
-	my $node = $self;
-
-	my ($key_iter, $key_length) = (0, length $key);
-	while ($key_iter < $key_length) {
-		my $childs_type = ref($node->[$CHILDS]);
-
-		#Key does not exist since we're at the end of the trie
-		if (! $childs_type) { $node = undef; last }
-
-		#Check within the compressed trie node
-		elsif ($childs_type eq 'ARRAY') {
-			#Determine where the keys match
-			my $old_key = $node->[$CHILDS][$SINGLE_CHILD_KEY];
-			my $old_key_length = length $old_key;
-			my $match_length = $find_match_length_ref->(substr($key, $key_iter), $old_key);
-
-			#The new key contains all of the old key
-			if($match_length == $old_key_length) {
-				#Move to the end of the compressed node
-				$node = $node->[$CHILDS][$SINGLE_CHILD_NODE];
-				#Move to the next part of the key
-				$key_iter += $match_length;
-
-			#The old key contains all of the new key
-			} elsif($match_length == $key_length - $key_iter) {
-				#Create a new trie containing the unmatched suffix of the matched key and its sub-trie
-				my $new_node = [];
-				$new_node->[$CHILDS][$SINGLE_CHILD_KEY] = substr($old_key, $match_length);
-				$new_node->[$CHILDS][$SINGLE_CHILD_NODE] = $node->[$CHILDS][$SINGLE_CHILD_NODE];
-				$node = $new_node;
-				last;
-
-			#There was a mismatch in the comparison so the key doesn't exist
-			} else { $node = undef; last }
-
-		#Keep expanding down the trie
-		} else {
-			$node = $node->[$CHILDS]{substr($key, $key_iter, 1)};
-			++$key_iter;
-		}
-	}
-
-	return $node ? $make_new_trie_ref->($node, $self) : undef;
-}
-
-*lookup = \&find;
-
-sub remove {
+sub erase {
 	my $self = shift;
 	my ($key) = @_;
 
@@ -353,8 +355,60 @@ sub remove {
 
 	return $deleted_value;
 }
+*remove = \&erase;
 
-*erase = \&remove;
+
+sub merge {
+	my $self = shift;
+	my ($key, $trie, $choice_ref) = @_;
+	$choice_ref ||= $merge_choice_ref;
+
+	my $preexisting_value = $self->add($key);
+	my $merge_point = $self->find($key);
+
+	my $childs_type = ref($merge_point->[$CHILDS]);
+	if (! $childs_type) {
+		$merge_point->[$CHILDS] = $trie->[$CHILDS];
+
+		$merge_point->[$VALUE] = $preexisting_value
+			? $trie->[$VALUE]
+			: $choice_ref->($merge_point->[$VALUE], $trie->[$VALUE]);
+		$compress_trie_ref->($merge_point->[$CHILDS][$SINGLE_CHILD_NODE], $merge_point)
+			if ref($merge_point->[$CHILDS]) eq 'ARRAY';
+
+	#We need to consider how to merge
+	} else {
+		#both single
+		#
+		#both multi
+		#
+		#
+
+		#m-om-my - asdga
+		#     ma - sdaa
+		#=
+		#m-om-m-y-asdga
+		#       a-sdaa
+		#
+		#m-om-may
+		#m-om m-a
+		#     d-ad
+		#=
+		#m-om-m-a-y
+		#     d-ad
+		#
+		#m-om-m-y
+		#     m-as
+		#m-om m-a
+		#     d-ad
+		#=
+		#m-om-m-y
+		#       a-s
+		#     d-ad
+
+	}
+
+}
 
 sub prune {
 	my $self = shift;
@@ -429,107 +483,5 @@ sub prune {
 	return $pruned_trie;
 }
 
-sub merge {
-	my $self = shift;
-	my ($key, $trie, $choice_ref) = @_;
-	$choice_ref ||= $merge_choice_ref;
-
-	my $preexisting_value = $self->add($key);
-	my $merge_point = $self->find($key);
-
-	my $childs_type = ref($merge_point->[$CHILDS]);
-	if (! $childs_type) {
-		$merge_point->[$CHILDS] = $trie->[$CHILDS];
-
-		$merge_point->[$VALUE] = $preexisting_value
-			? $trie->[$VALUE]
-			: $choice_ref->($merge_point->[$VALUE], $trie->[$VALUE]);
-		$compress_trie_ref->($merge_point->[$CHILDS][$SINGLE_CHILD_NODE], $merge_point)
-			if ref($merge_point->[$CHILDS]) eq 'ARRAY';
-
-	#We need to consider how to merge
-	} else {
-		#both single
-		#
-		#both multi
-		#
-		#
-
-		#m-om-my - asdga
-		#     ma - sdaa
-		#=
-		#m-om-m-y-asdga
-		#       a-sdaa
-		#
-		#m-om-may
-		#m-om m-a
-		#     d-ad
-		#=
-		#m-om-m-a-y
-		#     d-ad
-		#
-		#m-om-m-y
-		#     m-as
-		#m-om m-a
-		#     d-ad
-		#=
-		#m-om-m-y
-		#       a-s
-		#     d-ad
-
-	}
-
-}
-
-#package CompressedTrie::Iterator;
-#
-#sub new {
-#	my $class = shift;
-#	$class = ref($class) || $class;
-#	my $self = {
-#		_ITERATOR_STACK => [],
-#	};
-#
-#	my $current = shift;
-#	my $iterator_stack_ref = $self->{_ITERATOR_STACK};
-#
-#	push @$iterator_stack_ref, ['', $current]
-#		if $current->[$VALUE]
-#		|| $current->[$CHILDS];
-#
-#	while ($current->[$CHILDS]) {
-#		push @$iterator_stack_ref, ref($current->[$CHILDS]) eq 'ARRAY'
-#			? @{$current->[$CHILDS]}
-#			: %{$current->[$CHILDS]};
-#		$current = $iterator_stack_ref->[-1][1];
-#	}
-#
-#	return bless $self, $class;
-#}
-#
-#sub value {
-#	return @{$self->{_ITERATOR_STACK}} ? ${$self->{_ITERATOR_STACK}[-1][1][$VALUE]} : undef;
-#}
-#
-#sub key {
-#	return join '', map { $_->[0] } @{$self->{_ITERATOR_STACK}};
-#}
-#
-#sub next {
-#	my $self = shift;
-#
-#	my $iterator_stack_ref = $self->{_ITERATOR_STACK};
-#
-#	splice @{$iterator_stack_ref->[-1]}, 2;
-#	if (@{$iterator_stack_ref->[-1]}) {
-#		my $current
-#		while ()
-#	}
-#
-#	if ($top->[$VALUE]) {
-#
-#	}
-#}
-#
 1;
 
