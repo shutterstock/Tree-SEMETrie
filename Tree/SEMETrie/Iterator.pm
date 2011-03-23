@@ -39,7 +39,7 @@ sub value {
 
 #Iterator Operators
 
-sub is_done { @{$_[0]{_ITERATOR_STACK}} > 0 }
+sub is_done { ! @{$_[0]{_ITERATOR_STACK}} }
 
 sub next {
 	my $self = shift;

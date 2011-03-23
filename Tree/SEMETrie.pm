@@ -65,6 +65,7 @@ sub new {
 
 #Root Accessors/Mutators
 
+#Get a list of all immediate [path, child node] pairs
 sub childs {
 	my $self = shift;
 	my $childs_ref = $self->[$CHILDS];
@@ -76,34 +77,39 @@ sub childs {
 }
 *children = \&childs;
 
+#Get/Set the value of the root
 sub value {
 	my $self = shift;
 	if (@_) {
 		${$self->[$VALUE]} = $_[0];
 	}
-	return ${$self->[$VALUE]};
+	return $self->[$VALUE] ? ${$self->[$VALUE]} : undef;
 }
 
 #Validators
 
+#Returns true if the root has any child paths
 sub has_childs { ref($_[0][$CHILDS]) ne '' }
 *has_children = \&has_childs;
 
+#Returns true if the root has an associated value
 sub has_value { defined $_[0][$VALUE] }
 
 #Trie Accessors
 
+#Gets every path to every stored value as [path, value] pairs
 sub all {
 	my $self = shift;
 
 	my @results;
-	for (my $iterator = $self->iterator; $iterator->is_done; $iterator->next) {
+	for (my $iterator = $self->iterator; ! $iterator->is_done; $iterator->next) {
 		push @results, [$iterator->key, $iterator->value];
 	}
 
 	return @results;
 }
 
+#Finds the root of a trie that matches the given key.  If no such subtrie exists, returns undef.
 sub find {
 	my $self = shift;
 	my ($key) = @_;
@@ -154,10 +160,13 @@ sub find {
 }
 *lookup = \&find;
 
+#Get a Tree::SEMETrie::Iterator for efficient trie traversal
 sub iterator { Tree::SEMETrie::Iterator->new($_[0]) }
 
 #Trie Operators
 
+#Inserts a unique path into the trie given a key.  If the full key already exists,
+#the function returns false.  Any arbitrary value may be stored at the end of the path.
 sub add {
 	my $self = shift;
 	my ($key, $value) = @_;
@@ -266,6 +275,7 @@ sub add {
 }
 *insert = \&add;
 
+#Removes a path from the trie.  Returns the value stored at the end of the path.
 sub erase {
 	my $self = shift;
 	my ($key) = @_;
@@ -410,6 +420,7 @@ sub merge {
 
 }
 
+#Remove the entire subtrie with a given path.  Returns the removed
 sub prune {
 	my $self = shift;
 	my ($key) = @_;

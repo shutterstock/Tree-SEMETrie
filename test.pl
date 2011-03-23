@@ -17,7 +17,7 @@ use Tree::SEMETrie;
 
 }
 
-{ #Test basic functionality 
+{ #Test basic functionality
 
 	my $trie = Tree::SEMETrie->new();
 
@@ -32,6 +32,8 @@ use Tree::SEMETrie;
 	ok ! defined $trie->find('q'),'Does not retrieve an unknown key';
 
 }
+
+#
 
 { #Test key and value coverage
 
@@ -63,6 +65,9 @@ use Tree::SEMETrie;
 	ok ref $trie->find('g')->value eq 'HASH',  "Retrieves hash reference value";
 	ok ref $trie->find('h')->value,            "Retrieves blessed value";
 
+}
+
+{ #Test iteration
 }
 
 1;
