@@ -70,4 +70,3 @@ use Tree::SEMETrie;
 { #Test iteration
 }
 
-1;
