@@ -138,6 +138,8 @@ sub find {
 	my $self = shift;
 	my ($key) = @_;
 
+	return undef unless defined $key;
+
 	my $node = $self;
 
 	my ($key_iter, $key_length) = (0, length $key);
@@ -193,7 +195,7 @@ sub add {
 	my ($key, $value) = @_;
 
 	#No path should ever exist for undef
-	return unless defined $key;
+	die "Key must be defined" unless defined $key;
 
 	my $node = $self;
 

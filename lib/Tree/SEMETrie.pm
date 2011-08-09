@@ -10,7 +10,7 @@ BEGIN {
 	my $PACKAGE = __PACKAGE__;
 	my $IMPLEMENTATION = 'Tree::SEMETrie::Fast';
 
-	my @METHODS = qw{new childs value has_childs has_value};
+	my @METHODS = qw{new childs value has_childs has_value add find};
 
 	no strict 'refs';
 	no warnings 'once';
@@ -18,6 +18,9 @@ BEGIN {
 	*{"$PACKAGE\::$_"} = \*{"$IMPLEMENTATION\::$_"} for @METHODS;
 	*{"$PACKAGE\::children"} = \*{"$IMPLEMENTATION\::childs"};
 	*{"$PACKAGE\::has_children"} = \*{"$IMPLEMENTATION\::has_childs"};
+	*{"$PACKAGE\::insert"} = \*{"$IMPLEMENTATION\::add"};
+	*{"$PACKAGE\::lookup"} = \*{"$IMPLEMENTATION\::find"};
+
 	*{"$PACKAGE\::implementation"} = sub { $IMPLEMENTATION };
 };
 
