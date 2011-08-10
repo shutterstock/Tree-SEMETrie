@@ -10,13 +10,14 @@ BEGIN {
 	my $PACKAGE = __PACKAGE__;
 	my $IMPLEMENTATION = 'Tree::SEMETrie::Fast';
 
-	my @METHODS = qw{new childs value has_childs has_value add find};
+	my @METHODS = qw{new childs value has_childs has_value add find remove};
 
 	no strict 'refs';
 	no warnings 'once';
 	eval "require $IMPLEMENTATION";
 	*{"$PACKAGE\::$_"} = \*{"$IMPLEMENTATION\::$_"} for @METHODS;
 	*{"$PACKAGE\::children"} = \*{"$IMPLEMENTATION\::childs"};
+	*{"$PACKAGE\::erase"} = \*{"$IMPLEMENTATION\::remove"};
 	*{"$PACKAGE\::has_children"} = \*{"$IMPLEMENTATION\::has_childs"};
 	*{"$PACKAGE\::insert"} = \*{"$IMPLEMENTATION\::add"};
 	*{"$PACKAGE\::lookup"} = \*{"$IMPLEMENTATION\::find"};

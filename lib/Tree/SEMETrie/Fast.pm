@@ -303,6 +303,8 @@ sub erase {
 	my $self = shift;
 	my ($key) = @_;
 
+	return undef unless defined $key;
+
 	my $grand_parent_node = undef;
 	my $parent_node = undef;
 	my $node = $self;
