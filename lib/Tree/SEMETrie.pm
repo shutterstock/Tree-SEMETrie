@@ -25,6 +25,15 @@ BEGIN {
 	*{"$PACKAGE\::implementation"} = sub { $IMPLEMENTATION };
 };
 
+
+sub find_value {
+	my $self = shift;
+
+	my $entry = $self->find(@_);
+	return $entry ? $entry->value : undef;
+}
+*lookup_value = \&find_value;
+
 #Traversal
 
 #Gets every path to every stored value as [path, value] pairs

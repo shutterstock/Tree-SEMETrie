@@ -192,10 +192,11 @@ sub find {
 #the function returns false.  Any arbitrary value may be stored at the end of the path.
 sub add {
 	my $self = shift;
-	my ($key, $value) = @_;
+	my ($key, $value, $choice_ref) = @_;
 
 	#No path should ever exist for undef
 	die "Key must be defined" unless defined $key;
+	$choice_ref ||= $merge_choice_ref;
 
 	my $node = $self;
 
@@ -290,11 +291,11 @@ sub add {
 	}
 
 	#Return success/fail
-	if (! $node->[$VALUE]) {
-		${$node->[$VALUE]} = $value;
-		return 1;
-	}
-	return 0;
+	${$node->[$VALUE]} = $node->[$VALUE]
+		? $choice_ref->(${$node->[$VALUE]}, $value)
+		: $value;
+
+	return 1;
 }
 *insert = \&add;
 
