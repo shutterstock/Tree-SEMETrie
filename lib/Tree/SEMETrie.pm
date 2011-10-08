@@ -1,4 +1,4 @@
-package Tree::SEMETrie::Fast;
+package Tree::SEMETrie;
 
 use 5.006;
 use strict;
@@ -8,7 +8,7 @@ use List::Util ();
 
 =head1 NAME
 
-Tree::SEMETrie::Fast - The great new Tree::SEMETrie::Fast!
+Tree::SEMETrie - The great new Tree::SEMETrie
 
 =head1 VERSION
 
@@ -70,9 +70,9 @@ Quick summary of what the module does.
 
 Perhaps a little code snippet.
 
-    use Tree::SEMETrie::Fast;
+    use Tree::SEMETrie;
 
-    my $foo = Tree::SEMETrie::Fast->new();
+    my $foo = Tree::SEMETrie->new();
     ...
 
 =head1 SUBROUTINES/METHODS
@@ -634,7 +634,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Tree::SEMETrie::Fast
+    perldoc Tree::SEMETrie
 
 
 You can also look for information at:
@@ -676,4 +676,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1; # End of Tree::SEMETrie::Fast
+1; # End of Tree::SEMETrie
