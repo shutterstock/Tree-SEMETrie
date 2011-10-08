@@ -93,11 +93,11 @@ sub new {
 
 =head2 Root Accessors/Mutators
 
-=head3 childs
+=head3 children
 
 Get a list of all immediate B<[$path, $child_node]> pairs.
 
-=head3 children
+=head3 childs
 
 Alias for childs.
 
@@ -112,8 +112,9 @@ sub childs {
 		$childs_type eq 'HASH'  ? map { [$_, $make_new_trie_ref->($childs_ref->{$_}, $self)] } keys %$childs_ref :
 			();
 }
+*children = \&childs;
 
-=head2 value(I<$new_value>)
+=head3 value(I<$new_value>)
 
 Get/Set the value of the root.  Returns undef if there is no value.
 
@@ -125,15 +126,42 @@ sub value {
 	return $self->[$VALUE] ? ${$self->[$VALUE]} : undef;
 }
 
-#Returns true if the root has any child paths
+=head2 Root Verifiers
+
+=head3 has_children
+
+Returns true if the root has any child paths.
+
+=head3 has_children
+
+Alias for has_childs.
+
+=cut
+
 sub has_childs { ref($_[0][$CHILDS]) ne '' }
 
-#Returns true if the root has an associated value
+*has_children = \&has_childs;
+
+=head3 has_value
+
+Returns true if the root has an associated value.
+
+=cut 
+
 sub has_value { defined $_[0][$VALUE] }
 
-#Trie Accessors
+=head2 Trie Accessors
 
-#Finds the root of a trie that matches the given key.  If no such subtrie exists, returns undef.
+=head3 find
+
+Finds the root of a trie that matches the given key.  If no such subtrie exists, returns undef.
+
+=head3 lookup
+
+Alias for find.
+
+=cut
+
 sub find {
 	my $self = shift;
 	my ($key) = @_;
@@ -186,10 +214,35 @@ sub find {
 }
 *lookup = \&find;
 
-#Trie Operators
+=head3 find_value
 
-#Inserts a unique path into the trie given a key.  If the full key already exists,
-#the function returns false.  Any arbitrary value may be stored at the end of the path.
+=head3 lookup_value
+
+Alias for find_value.
+
+=cut
+
+sub find_value {
+	my $self = shift;
+
+	my $entry = $self->find(@_);
+	return $entry ? $entry->value : undef;
+}
+*lookup_value = \&find_value;
+
+=head2 Trie Mutators
+
+=head3 add
+
+Inserts a unique path into the trie given a key.  If the full key already exists,
+the function returns false.  Any arbitrary value may be stored at the end of the path.
+
+=head3 insert
+
+Alias for add.
+
+=cut
+
 sub add {
 	my $self = shift;
 	my ($key, $value, $choice_ref) = @_;
@@ -299,7 +352,16 @@ sub add {
 }
 *insert = \&add;
 
-#Removes a path from the trie.  Returns the value stored at the end of the path.
+=head3 erase
+
+Removes a path from the trie.  Returns the value stored at the end of the path.
+
+=head3 remove
+
+Alias for erase.
+
+=cut
+
 sub erase {
 	my $self = shift;
 	my ($key) = @_;
@@ -393,6 +455,9 @@ sub erase {
 }
 *remove = \&erase;
 
+=head3 merge
+
+=cut
 
 sub merge {
 	my $self = shift;
@@ -446,7 +511,12 @@ sub merge {
 
 }
 
-#Remove the entire subtrie with a given path.  Returns the removed
+=head3 prune
+
+Remove the entire subtrie with a given path.  Returns the removed
+
+=cut
+
 sub prune {
 	my $self = shift;
 	my ($key) = @_;
@@ -519,6 +589,33 @@ sub prune {
 
 	return $pruned_trie;
 }
+
+=head2 Trie Traversal
+
+=head3 all
+
+Gets every path to every stored value as [path, value] pairs.
+
+=cut
+
+sub all {
+	my $self = shift;
+
+	my @results;
+	for (my $iterator = $self->iterator; ! $iterator->is_done; $iterator->next) {
+		push @results, [$iterator->key, $iterator->value];
+	}
+
+	return @results;
+}
+
+=head3 iterator
+
+Get a Tree::SEMETrie::Iterator for efficient trie traversal.
+
+=cut
+
+sub iterator { Tree::SEMETrie::Iterator->new($_[0]) }
 
 =head1 AUTHOR
 
