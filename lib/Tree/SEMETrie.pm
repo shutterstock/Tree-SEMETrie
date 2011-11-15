@@ -5,10 +5,11 @@ use strict;
 use warnings;
 
 use List::Util ();
+use Tree::SEMETrie::Iterator ();
 
 =head1 NAME
 
-Tree::SEMETrie - The great new Tree::SEMETrie
+Tree::SEMETrie - Single-Edge Multi-Edge Trie
 
 =head1 VERSION
 
@@ -43,6 +44,8 @@ my $compress_trie_ref = sub {
 	return;
 };
 
+my $default_strategy_ref = sub { $_[0] };
+
 my $find_match_length_ref = sub {
 	my $max_match_length = List::Util::min(length($_[0]), length($_[1]));
 	my $char_iter = 0;
@@ -54,8 +57,6 @@ my $find_match_length_ref = sub {
 
 my $make_new_trie_ref = sub { bless $_[0], ref($_[1]) };
 
-my $merge_choice_ref = sub { $_[0] };
-
 my $split_string_at_position_ref = sub {
 	return (
 		substr($_[0], 0, $_[1]),
@@ -66,14 +67,20 @@ my $split_string_at_position_ref = sub {
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
+COMING SOON
 
-Perhaps a little code snippet.
+	use Tree::SEMETrie;
 
-    use Tree::SEMETrie;
+	my $trie = Tree::SEMETrie->new();
+	$trie->add('a long word', 23.7);
+	$trie->add('a longer word', 102);
 
-    my $foo = Tree::SEMETrie->new();
-    ...
+	for (my $iterator = $self->iterator; ! $iterator->is_done; $iterator->next) {
+		print $iterator->key . ' => ' . $trie->find($iterator->key)->has_children
+			if $trie->find_value($iterator->key) eq $iterator->value;
+	}
+
+	$trie->remove($_->[0]) for $trie->all;
 
 =head1 SUBROUTINES/METHODS
 
@@ -81,9 +88,11 @@ Perhaps a little code snippet.
 
 =head3 new
 
-=cut
+Create a new empty trie.
 
-#Constructor
+	my $trie = Tree::SEMETrie->new;
+
+=cut
 
 sub new {
 	my $class = shift;
@@ -95,11 +104,14 @@ sub new {
 
 =head3 children
 
-Get a list of all immediate B<[$path, $child_node]> pairs.
+Get the list of all immediate [edge => subtrie] pairs.
+
+	my @edge_subtrie_pairs = $trie->children;
+	my ($edge, $subtrie) = @{$edge_subtrie_pairs[0]};
 
 =head3 childs
 
-Alias for childs.
+Alias for children.
 
 =cut
 
@@ -108,21 +120,23 @@ sub childs {
 	my $childs_ref = $self->[$CHILDS];
 	my $childs_type = ref($childs_ref);
 	return
-		$childs_type eq 'ARRAY' ? [$childs_ref->[$SINGLE_CHILD_KEY], $make_new_trie_ref->($childs_ref->[$SINGLE_CHILD_NODE], $self)] :
-		$childs_type eq 'HASH'  ? map { [$_, $make_new_trie_ref->($childs_ref->{$_}, $self)] } keys %$childs_ref :
+		$childs_type eq 'ARRAY' ? [$childs_ref->[$SINGLE_CHILD_KEY] => $make_new_trie_ref->($childs_ref->[$SINGLE_CHILD_NODE], $self)] :
+		$childs_type eq 'HASH'  ? map { [$_ => $make_new_trie_ref->($childs_ref->{$_}, $self)] } keys %$childs_ref :
 			();
 }
 *children = \&childs;
 
-=head3 value(I<$new_value>)
+=head3 value
 
-Get/Set the value of the root.  Returns undef if there is no value.
+Get/Set the value of the root.  Return undef if there is no value.
+
+	my $new_value = $trie->value($new_value);
 
 =cut
 
 sub value {
 	my $self = shift;
-	if (@_) { ${$self->[$VALUE]} = $_[0]}
+	if (@_) { ${$self->[$VALUE]} = $_[0] }
 	return $self->[$VALUE] ? ${$self->[$VALUE]} : undef;
 }
 
@@ -130,11 +144,13 @@ sub value {
 
 =head3 has_children
 
-Returns true if the root has any child paths.
+Return true if the root has any child paths.
 
-=head3 has_children
+	$trie->has_children;
 
-Alias for has_childs.
+=head3 has_childs
+
+Alias for has_children.
 
 =cut
 
@@ -144,7 +160,9 @@ sub has_childs { ref($_[0][$CHILDS]) ne '' }
 
 =head3 has_value
 
-Returns true if the root has an associated value.
+Return true if the root has an associated value.
+
+	$trie->has_value;
 
 =cut 
 
@@ -154,7 +172,9 @@ sub has_value { defined $_[0][$VALUE] }
 
 =head3 find
 
-Finds the root of a trie that matches the given key.  If no such subtrie exists, returns undef.
+Find the root of a subtrie that matches the given key.  If no such subtrie exists, return undef.
+
+	my $subtrie = $trie->find($key);
 
 =head3 lookup
 
@@ -216,6 +236,10 @@ sub find {
 
 =head3 find_value
 
+Find the value associated with the given key.  If no such key exists, return undef.
+
+	my $value = $trie->find_value($key);
+
 =head3 lookup_value
 
 Alias for find_value.
@@ -234,8 +258,21 @@ sub find_value {
 
 =head3 add
 
-Inserts a unique path into the trie given a key.  If the full key already exists,
-the function returns false.  Any arbitrary value may be stored at the end of the path.
+Insert a key into the trie.  A value may optionally be provided as well.  In
+the case of a pre-existing key, the strategy function determines which value
+is stored.  The default strategy function chooses the original value.
+
+	$trie->add('some path');
+	$trie->add('some path', 'optional value');
+	$trie->add('some path', 'new value to be ignored', sub { $_[0] });
+	$trie->add('some path', 'new value to be inserted', sub { $_[1] });
+
+A custom strategy must conform to the following interface:
+
+	sub new_strategy {
+		my ($current_value, $new_value) = @_;
+		return $desired_value;
+	}
 
 =head3 insert
 
@@ -245,11 +282,12 @@ Alias for add.
 
 sub add {
 	my $self = shift;
-	my ($key, $value, $choice_ref) = @_;
+	my ($key, $value, $strategy_ref) = @_;
 
 	#No path should ever exist for undef
-	die "Key must be defined" unless defined $key;
-	$choice_ref ||= $merge_choice_ref;
+	return undef unless defined $key;
+
+	$strategy_ref ||= $default_strategy_ref;
 
 	my $node = $self;
 
@@ -345,7 +383,7 @@ sub add {
 
 	#Return success/fail
 	${$node->[$VALUE]} = $node->[$VALUE]
-		? $choice_ref->(${$node->[$VALUE]}, $value)
+		? $strategy_ref->(${$node->[$VALUE]}, $value)
 		: $value;
 
 	return 1;
@@ -354,7 +392,9 @@ sub add {
 
 =head3 erase
 
-Removes a path from the trie.  Returns the value stored at the end of the path.
+Remove a key from the trie.  Return the value associated with the removed key.
+	
+	my $optional_value = $trie->erase('some path');
 
 =head3 remove
 
@@ -366,6 +406,7 @@ sub erase {
 	my $self = shift;
 	my ($key) = @_;
 
+	#No path should ever exist for undef
 	return undef unless defined $key;
 
 	my $grand_parent_node = undef;
@@ -457,12 +498,18 @@ sub erase {
 
 =head3 merge
 
+IN DEVELOPMENT
+
 =cut
 
 sub merge {
 	my $self = shift;
-	my ($key, $trie, $choice_ref) = @_;
-	$choice_ref ||= $merge_choice_ref;
+	my ($key, $trie, $strategy_ref) = @_;
+
+	#No path should ever exist for undef
+	return undef unless defined $key;
+
+	$strategy_ref ||= $default_strategy_ref;
 
 	my $preexisting_value = $self->add($key);
 	my $merge_point = $self->find($key);
@@ -473,7 +520,7 @@ sub merge {
 
 		$merge_point->[$VALUE] = $preexisting_value
 			? $trie->[$VALUE]
-			: $choice_ref->($merge_point->[$VALUE], $trie->[$VALUE]);
+			: $strategy_ref->($merge_point->[$VALUE], $trie->[$VALUE]);
 		$compress_trie_ref->($merge_point->[$CHILDS][$SINGLE_CHILD_NODE], $merge_point)
 			if ref($merge_point->[$CHILDS]) eq 'ARRAY';
 
@@ -513,13 +560,18 @@ sub merge {
 
 =head3 prune
 
-Remove the entire subtrie with a given path.  Returns the removed
+IN DEVELOPMENT
+
+Remove the entire subtrie of the given key.  Return the removed subtrie.
 
 =cut
 
 sub prune {
 	my $self = shift;
 	my ($key) = @_;
+
+	#No path should ever exist for undef
+	return undef unless defined $key;
 
 	my $grand_parent_node = undef;
 	my $parent_node = undef;
@@ -594,7 +646,10 @@ sub prune {
 
 =head3 all
 
-Gets every path to every stored value as [path, value] pairs.
+Get a list of every key and its associated value as [key => value] pairs. Order
+is not guaranteed.
+
+	my @key_value_pairs = $trie->all;
 
 =cut
 
@@ -611,7 +666,10 @@ sub all {
 
 =head3 iterator
 
-Get a Tree::SEMETrie::Iterator for efficient trie traversal.
+Get a Tree::SEMETrie::Iterator for efficient trie traversal. Order is not
+guaranteed.
+
+	my $iterator = $trie->iterator;
 
 =cut
 
@@ -627,8 +685,21 @@ Please report any bugs or feature requests to C<bug-tree-semetrie-fast at rt.cpa
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Tree-SEMETrie-Fast>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
+=head1 TODO
 
+=over 4
 
+=item * Finish SYNOPSIS section.
+
+=item * Finish merge function.
+
+=item * Finish prune function.
+
+=item * Add benchmarking scripts.
+
+=item * Add SEE ALSO section.
+
+=back
 
 =head1 SUPPORT
 
@@ -640,6 +711,10 @@ You can find documentation for this module with the perldoc command.
 You can also look for information at:
 
 =over 4
+
+=item * Official GitHub Repository
+
+L<http://github.com/shutterstock/Tree-SEMETrie>
 
 =item * RT: CPAN's request tracker (report bugs here)
 
@@ -659,10 +734,6 @@ L<http://search.cpan.org/dist/Tree-SEMETrie-Fast/>
 
 =back
 
-
-=head1 ACKNOWLEDGEMENTS
-
-
 =head1 LICENSE AND COPYRIGHT
 
 Copyright 2011 Aaron Cohen.
@@ -672,7 +743,6 @@ under the terms of either: the GNU General Public License as published
 by the Free Software Foundation; or the Artistic License.
 
 See http://dev.perl.org/licenses/ for more information.
-
 
 =cut
 

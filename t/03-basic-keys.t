@@ -14,17 +14,17 @@ ok ! $trie->find('a'),   'Non-existent key not found';
 ok ! $trie->remove('a'), 'Non-existent key not removed';
 
 #Check that undefined keys cannot be stored
-dies_ok { $trie->add(undef) }       'Storing undefined key throws error';
-ok ! defined($trie->find(undef)),   'Retrieving undefined key returns undef';
-ok ! defined($trie->remove(undef)), 'Removing undefined key returns undef';
+is $trie->add(undef), undef,    'Storing undefined key returns undef';
+is $trie->find(undef), undef,   'Retrieving undefined key returns undef';
+is $trie->remove(undef), undef, 'Removing undefined key returns undef';
 
 #Check that a key can be stored and retrieved
-ok $trie->add('a'),                    'Key without defined value added successfully';
-ok $trie->find('a'),                   'Key without defined value found';
-ok $trie->find('a')->has_value,        'Key without defined value has value';
-ok ! defined($trie->find('a')->value), 'Value of key without defined value is undefined';
-ok ! defined($trie->remove('a')),      'Removing Key without defined value returns undef';
-ok ! $trie->find('a'),                 'Removed key without defined value not found';
+ok $trie->add('a'),                'Key without defined value added successfully';
+ok $trie->find('a'),               'Key without defined value found';
+ok $trie->find('a')->has_value,    'Key without defined value has value';
+is $trie->find('a')->value, undef, 'Value of key without defined value is undefined';
+is $trie->remove('a'), undef,      'Removing Key without defined value returns undef';
+ok ! $trie->find('a'),             'Removed key without defined value not found';
 
 #Check that a key-value pair can be stored and retrieved
 ok $trie->add('b', 2),          'Key with defined value added successfully';
