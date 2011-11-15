@@ -13,11 +13,11 @@ Tree::SEMETrie - Single-Edge Multi-Edge Trie
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 #Class Constants
 my $VALUE  = 0;
@@ -258,9 +258,9 @@ sub find_value {
 
 =head3 add
 
-Insert a key into the trie.  A value may optionally be provided as well.  In
-the case of a pre-existing key, the strategy function determines which value
-is stored.  The default strategy function chooses the original value.
+Insert a key into the trie.  Return a reference to the key's value.  In the case
+of a pre-existing key, the strategy function determines which value is stored.
+The default strategy function chooses the original value.
 
 	$trie->add('some path');
 	$trie->add('some path', 'optional value');
@@ -381,12 +381,12 @@ sub add {
 		}
 	}
 
-	#Return success/fail
+	#Assign the value based on the strategy
 	${$node->[$VALUE]} = $node->[$VALUE]
 		? $strategy_ref->(${$node->[$VALUE]}, $value)
 		: $value;
 
-	return 1;
+	return $node->[$VALUE];
 }
 *insert = \&add;
 
