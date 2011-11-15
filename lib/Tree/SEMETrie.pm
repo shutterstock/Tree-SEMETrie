@@ -718,19 +718,19 @@ L<http://github.com/shutterstock/Tree-SEMETrie>
 
 =item * RT: CPAN's request tracker (report bugs here)
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Tree-SEMETrie-Fast>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Tree-SEMETrie>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Tree-SEMETrie-Fast>
+L<http://annocpan.org/dist/Tree-SEMETrie>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Tree-SEMETrie-Fast>
+L<http://cpanratings.perl.org/d/Tree-SEMETrie>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Tree-SEMETrie-Fast/>
+L<http://search.cpan.org/dist/Tree-SEMETrie/>
 
 =back
 
